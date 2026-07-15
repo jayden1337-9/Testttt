@@ -45,7 +45,7 @@ class _BrowserPageState extends State<BrowserPage> {
           ),
         ),
         floatingActionButton: FloatingActionButton.small(
-          onPressed: () => tabManager.addTab('about:newtab'),
+          onPressed: () => tabManager.addTab('about:newtab', isIncognito: currentTab.isIncognito),
           child: const Icon(Icons.add),
         ),
       ),
@@ -53,7 +53,9 @@ class _BrowserPageState extends State<BrowserPage> {
   }
 
   Widget _renderContent(BrowserTab tab) {
-    if (tab.url == 'about:newtab') return const NewTabPage();
+    if (tab.url == 'about:newtab') {
+      return NewTabPage(isIncognito: tab.isIncognito);
+    }
     if (tab.url == 'nova://settings') return const SettingsPage();
     if (tab.url == 'browser://history') return const HistoryPage();
     if (tab.url == 'browser://bookmarks') return const BookmarksPage();
@@ -90,10 +92,17 @@ class _BrowserPageState extends State<BrowserPage> {
                     width: 3,
                   ),
                 ),
+                color: tab.isIncognito ? Colors.grey[850] : null,
               ),
               child: Row(
                 children: [
-                  Icon(tab.isLoading ? Icons.hourglass_empty : Icons.public, size: 16),
+                  Icon(
+                    tab.isIncognito 
+                        ? Icons.privacy_tip 
+                        : (tab.isLoading ? Icons.hourglass_empty : Icons.public),
+                    size: 16,
+                    color: tab.isIncognito ? Colors.white : null,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -102,6 +111,7 @@ class _BrowserPageState extends State<BrowserPage> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: tab.isIncognito ? Colors.white : null,
                       ),
                     ),
                   ),

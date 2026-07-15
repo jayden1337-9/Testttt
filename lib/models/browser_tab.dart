@@ -7,6 +7,7 @@ class BrowserTab {
   String title;
   WebViewController? controller;
   bool isLoading;
+  final bool isIncognito;
 
   BrowserTab({
     required this.id,
@@ -14,5 +15,6 @@ class BrowserTab {
     this.title = 'New Tab',
     this.controller,
     this.isLoading = false,
+    this.isIncognito = false,
   });
 }

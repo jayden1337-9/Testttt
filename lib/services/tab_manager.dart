@@ -20,10 +20,11 @@ class TabManager extends ChangeNotifier {
     addTab('about:newtab');
   }
 
-  void addTab(String url) {
+  void addTab(String url, {bool isIncognito = false}) {
     final tab = BrowserTab(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       url: url,
+      isIncognito: isIncognito,
     );
     
     if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://') && !url.startsWith('novafs://')) {
@@ -80,7 +81,7 @@ class TabManager extends ChangeNotifier {
 
   Future<void> toggleBookmark() async {
     final tab = currentTab;
-    if (tab.url.startsWith('http')) {
+    if (tab.url.startsWith('http') && !tab.isIncognito) {
       final isBookmarked = await _bookmarksService.isBookmarked(tab.url);
       if (isBookmarked) {
         await _bookmarksService.removeBookmark(tab.url);
@@ -92,7 +93,7 @@ class TabManager extends ChangeNotifier {
   }
 
   WebViewController _initController(BrowserTab tab, String initialUrl) {
-    return WebViewController()
+    final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
@@ -110,7 +111,11 @@ class TabManager extends ChangeNotifier {
             tab.isLoading = false;
             final title = await tab.controller!.getTitle();
             tab.title = title ?? 'Untitled';
-            _historyService.addEntry(url, tab.title);
+            
+            // Only save history if NOT incognito
+            if (!tab.isIncognito) {
+              _historyService.addEntry(url, tab.title);
+            }
             notifyListeners();
           },
         ),
@@ -122,5 +127,7 @@ class TabManager extends ChangeNotifier {
         return DownloadPermissionResponse.allow;
       })
       ..loadRequest(Uri.parse(initialUrl));
+
+    return controller;
   }
 }
