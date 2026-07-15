@@ -1,6 +1,5 @@
 import 'package:webview_flutter/webview_flutter.dart';
 
-/// Represents a single browser tab state.
 class BrowserTab {
   final String id;
   String url;
@@ -8,6 +7,8 @@ class BrowserTab {
   WebViewController? controller;
   bool isLoading;
   final bool isIncognito;
+  bool isDesktopMode;
+  bool isReaderMode;
 
   BrowserTab({
     required this.id,
@@ -16,5 +17,7 @@ class BrowserTab {
     this.controller,
     this.isLoading = false,
     this.isIncognito = false,
+    this.isDesktopMode = false,
+    this.isReaderMode = false,
   });
 }

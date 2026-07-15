@@ -92,6 +92,49 @@ class TabManager extends ChangeNotifier {
     }
   }
 
+  // Toggle Desktop Mode by changing User Agent
+  Future<void> toggleDesktopMode() async {
+    final tab = currentTab;
+    if (tab.controller == null) return;
+
+    tab.isDesktopMode = !tab.isDesktopMode;
+    if (tab.isDesktopMode) {
+      await tab.controller!.setUserAgent(
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+      );
+    } else {
+      await tab.controller!.setUserAgent(''); // Reset to default mobile
+    }
+    tab.controller!.reload();
+    notifyListeners();
+  }
+
+  // Toggle Reader Mode (Basic CSS injection for readability)
+  Future<void> toggleReaderMode() async {
+    final tab = currentTab;
+    if (tab.controller == null) return;
+
+    tab.isReaderMode = !tab.isReaderMode;
+    if (tab.isReaderMode) {
+      await tab.controller!.runJavaScript('''
+        document.body.style.backgroundColor = '#fdf6e3';
+        document.body.style.color = '#333';
+        document.querySelectorAll('img, iframe, video, ad').forEach(e => e.style.display = 'none');
+      ''');
+    } else {
+      tab.controller!.reload();
+    }
+    notifyListeners();
+  }
+
+  // Find in Page using JS window.find()
+  Future<void> findInPage(String query) async {
+    final tab = currentTab;
+    if (tab.controller == null || query.isEmpty) return;
+    
+    await tab.controller!.runJavaScript('window.find("$query", false, false, true, false, true, false)');
+  }
+
   WebViewController _initController(BrowserTab tab, String initialUrl) {
     final controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
@@ -111,8 +154,6 @@ class TabManager extends ChangeNotifier {
             tab.isLoading = false;
             final title = await tab.controller!.getTitle();
             tab.title = title ?? 'Untitled';
-            
-            // Only save history if NOT incognito
             if (!tab.isIncognito) {
               _historyService.addEntry(url, tab.title);
             }
