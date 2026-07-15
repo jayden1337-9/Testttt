@@ -24,6 +24,10 @@ jobs:
         with:
           flutter-version: '3.13.0'
 
+      # NEW STEP: This fixes the unsupported Gradle project error
+      - name: Regenerate Android Project
+        run: flutter create . --platforms=android --project-name nova_browser
+
       - name: Get dependencies
         run: flutter pub get
 
