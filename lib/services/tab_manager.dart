@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../models/browser_tab.dart';
+import 'history_service.dart';
 
 /// Manages the state of all open browser tabs.
 class TabManager extends ChangeNotifier {
   final List<BrowserTab> _tabs = [];
   int _currentIndex = 0;
+  final HistoryService _historyService = HistoryService();
 
   List<BrowserTab> get tabs => List.unmodifiable(_tabs);
   int get currentIndex => _currentIndex;
@@ -21,8 +23,7 @@ class TabManager extends ChangeNotifier {
       url: url,
     );
     
-    // Initialize WebViewController immediately if it's a web URL
-    if (!url.startsWith('about:') && !url.startsWith('nova://')) {
+    if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://')) {
       tab.controller = _initController(tab, url);
     }
     
@@ -54,15 +55,14 @@ class TabManager extends ChangeNotifier {
     final tab = currentTab;
     tab.url = url;
     
-    // If navigating to a new web URL, initialize or reload controller
-    if (!url.startsWith('about:') && !url.startsWith('nova://')) {
+    if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://')) {
       if (tab.controller == null) {
         tab.controller = _initController(tab, url);
       } else {
         tab.controller!.loadRequest(Uri.parse(url));
       }
     } else {
-      tab.controller = null; // Internal page, no webview needed
+      tab.controller = null; 
     }
     
     notifyListeners();
@@ -74,7 +74,7 @@ class TabManager extends ChangeNotifier {
       await tab.controller!.goBack();
       return true;
     }
-    return false; // Can't go back further in webview, close app/tab
+    return false;
   }
 
   WebViewController _initController(BrowserTab tab, String initialUrl) {
@@ -91,13 +91,16 @@ class TabManager extends ChangeNotifier {
             tab.isLoading = true;
             notifyListeners();
           },
-          onPageFinished: (url) {
+          onPageFinished: (url) async {
             tab.url = url;
             tab.isLoading = false;
-            tab.controller!.getTitle().then((title) {
-              tab.title = title ?? 'Untitled';
-              notifyListeners();
-            });
+            final title = await tab.controller!.getTitle();
+            tab.title = title ?? 'Untitled';
+            
+            // Save to NovaFS History!
+            _historyService.addEntry(url, tab.title);
+            
+            notifyListeners();
           },
         ),
       )
