@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/tab_manager.dart';
 import 'services/download_manager.dart';
+import 'services/app_settings_service.dart';
 import 'ui/pages/browser_page.dart';
 
 void main() {
@@ -17,6 +18,7 @@ class NovaBrowserApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => TabManager()),
         ChangeNotifierProvider(create: (context) => DownloadManager()),
+        ChangeNotifierProvider(create: (context) => AppSettingsService()),
       ],
       child: MaterialApp(
         title: 'Nova Browser',

@@ -6,8 +6,9 @@ import 'package:provider/provider.dart';
 
 class UrlBar extends StatelessWidget {
   final TextEditingController _controller = TextEditingController();
+  final VoidCallback onFindPressed;
 
-  UrlBar({Key? key}) : super(key: key);
+  UrlBar({Key? key, required this.onFindPressed}) : super(key: key);
 
   String _formatInput(String input) {
     if (input.startsWith('about:') || input.startsWith('nova://') || input.startsWith('browser://') || input.startsWith('novafs://')) {
@@ -77,6 +78,10 @@ class UrlBar extends StatelessWidget {
               IconButton(
                 icon: Icon(currentTab.isDesktopMode ? Icons.desktop_windows : Icons.phone_android),
                 onPressed: () => tabManager.toggleDesktopMode(),
+              ),
+              IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: onFindPressed,
               ),
             ],
             PopupMenuButton<String>(

@@ -5,6 +5,7 @@ import '../models/browser_tab.dart';
 import 'history_service.dart';
 import 'bookmarks_service.dart';
 import 'download_manager.dart';
+import 'app_settings_service.dart';
 
 class TabManager extends ChangeNotifier {
   final List<BrowserTab> _tabs = [];
@@ -12,6 +13,7 @@ class TabManager extends ChangeNotifier {
   final HistoryService _historyService = HistoryService();
   final BookmarksService _bookmarksService = BookmarksService();
   final DownloadManager _downloadManager = DownloadManager();
+  final AppSettingsService _appSettings = AppSettingsService();
 
   List<BrowserTab> get tabs => List.unmodifiable(_tabs);
   int get currentIndex => _currentIndex;
@@ -38,6 +40,8 @@ class TabManager extends ChangeNotifier {
   }
 
   void closeTab(int index) {
+    _tabs[index].controller = null;
+    
     if (_tabs.length == 1) {
       _tabs.clear();
       addTab('about:newtab');
@@ -132,14 +136,13 @@ class TabManager extends ChangeNotifier {
     await tab.controller!.runJavaScript('window.find("$query", false, false, true, false, true, false)');
   }
 
-  // Helper to check if URL should render a WebView
   bool _isWebUrl(String url) {
     return url.startsWith('http') || url.startsWith('https');
   }
 
   WebViewController _initController(BrowserTab tab, String initialUrl) {
     final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setJavaScriptMode(tab.allowJavaScript ? JavaScriptMode.unrestricted : JavaScriptMode.disabled)
       ..setNavigationDelegate(
         NavigationDelegate(
           onProgress: (progress) {
@@ -159,28 +162,37 @@ class TabManager extends ChangeNotifier {
             if (!tab.isIncognito) {
               _historyService.addEntry(url, tab.title);
             }
+            
+            if (_appSettings.forceDarkMode && !tab.isReaderMode) {
+              await tab.controller!.runJavaScript('''
+                document.documentElement.style.filter = 'invert(1) hue-rotate(180deg)';
+                document.querySelectorAll('img, picture, video').forEach(e => e.style.filter = 'invert(1) hue-rotate(180deg)');
+              ''');
+            }
             notifyListeners();
           },
-          // Intercept navigation requests (PDFs & External Apps)
           onNavigationRequest: (request) async {
             final url = request.url;
-            
-            // 1. Open External Apps (mailto:, tel:, intent:, geo:)
             if (url.startsWith('mailto:') || url.startsWith('tel:') || url.startsWith('intent:') || url.startsWith('geo:')) {
               if (await canLaunchUrl(Uri.parse(url))) {
                 await launchUrl(Uri.parse(url));
               }
               return NavigationDecision.prevent;
             }
-
-            // 2. Built-in PDF Viewer
             if (url.endsWith('.pdf')) {
               final pdfViewerUrl = 'https://docs.google.com/gview?embedded=true&url=$url';
               tab.controller!.loadRequest(Uri.parse(pdfViewerUrl));
               return NavigationDecision.prevent;
             }
-
             return NavigationDecision.navigate;
+          },
+          onWebResourceError: (error) {
+            if (error.errorType == WebResourceErrorType.serverCertificateUntrusted || 
+                error.errorType == WebResourceErrorType.failedSslHandshake) {
+              tab.url = 'nova://ssl-warning?originalUrl=${Uri.encodeComponent(initialUrl)}';
+              tab.controller = null;
+              notifyListeners();
+            }
           },
         ),
       )

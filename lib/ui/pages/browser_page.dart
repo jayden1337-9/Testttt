@@ -20,6 +20,12 @@ class BrowserPage extends StatefulWidget {
 }
 
 class _BrowserPageState extends State<BrowserPage> {
+  bool _showFindBar = false;
+
+  void _toggleFindBar() {
+    setState(() => _showFindBar = !_showFindBar);
+  }
+
   @override
   Widget build(BuildContext context) {
     final tabManager = context.watch<TabManager>();
@@ -29,6 +35,10 @@ class _BrowserPageState extends State<BrowserPage> {
       canPop: false,
       onPopInvoked: (didPop) async {
         if (didPop) return;
+        if (_showFindBar) {
+          setState(() => _showFindBar = false);
+          return;
+        }
         final wentBack = await tabManager.goBack();
         if (!wentBack) {
           Navigator.of(context).maybePop();
@@ -38,8 +48,28 @@ class _BrowserPageState extends State<BrowserPage> {
         body: SafeArea(
           child: Column(
             children: [
-              UrlBar(),
+              UrlBar(onFindPressed: _toggleFindBar),
               Expanded(child: _renderContent(currentTab)),
+              if (_showFindBar && currentTab.controller != null)
+                Container(
+                  padding: const EdgeInsets.all(8.0),
+                  color: Theme.of(context).colorScheme.surface,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          autofocus: true,
+                          decoration: const InputDecoration(hintText: 'Find in page...', isDense: true),
+                          onSubmitted: (val) => tabManager.findInPage(val),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: _toggleFindBar,
+                      )
+                    ],
+                  ),
+                ),
               _buildTabBar(context, tabManager),
             ],
           ),
