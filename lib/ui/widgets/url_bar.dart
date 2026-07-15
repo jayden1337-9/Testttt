@@ -64,6 +64,10 @@ class UrlBar extends StatelessWidget {
             ),
           ),
           IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () => tabManager.updateUrl('about:downloads'),
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => tabManager.updateUrl('nova://settings'),
           ),

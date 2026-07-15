@@ -2,12 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../models/browser_tab.dart';
 import 'history_service.dart';
+import 'download_manager.dart';
 
 /// Manages the state of all open browser tabs.
 class TabManager extends ChangeNotifier {
   final List<BrowserTab> _tabs = [];
   int _currentIndex = 0;
   final HistoryService _historyService = HistoryService();
+  final DownloadManager _downloadManager = DownloadManager();
 
   List<BrowserTab> get tabs => List.unmodifiable(_tabs);
   int get currentIndex => _currentIndex;
@@ -97,13 +99,19 @@ class TabManager extends ChangeNotifier {
             final title = await tab.controller!.getTitle();
             tab.title = title ?? 'Untitled';
             
-            // Save to NovaFS History!
             _historyService.addEntry(url, tab.title);
-            
             notifyListeners();
           },
         ),
       )
+      // Intercept Download Requests
+      ..setOnDownloadPermissionRequest((request) async {
+        final url = request.url.toString();
+        final filename = url.split('/').last.split('?').first;
+        
+        await _downloadManager.startDownload(url, filename);
+        return DownloadPermissionResponse.allow;
+      })
       ..loadRequest(Uri.parse(initialUrl));
   }
 }

@@ -15,9 +15,7 @@ class LocalNovaFS implements NovaFS {
 
   /// Converts a novafs:// path to a physical device path
   Future<String> _resolvePath(String novafsPath) async {
-    // Remove the protocol
     String cleanPath = novafsPath.replaceAll('novafs://', '');
-    // Remove duplicate slashes
     cleanPath = cleanPath.replaceAll(RegExp(r'\/+'), '/');
     
     final root = await _getRootDir();

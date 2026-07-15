@@ -4,6 +4,7 @@ import '../services/tab_manager.dart';
 import 'new_tab_page.dart';
 import 'settings_page.dart';
 import 'history_page.dart';
+import 'downloads_page.dart';
 import '../widgets/url_bar.dart';
 import '../widgets/web_view_container.dart';
 
@@ -58,6 +59,9 @@ class _BrowserPageState extends State<BrowserPage> {
     }
     if (tab.url == 'browser://history') {
       return const HistoryPage();
+    }
+    if (tab.url == 'about:downloads') {
+      return const DownloadsPage();
     }
     
     if (tab.controller != null) {
