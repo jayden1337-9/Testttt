@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/browser_tab.dart';
 import 'history_service.dart';
 import 'bookmarks_service.dart';
@@ -27,7 +28,7 @@ class TabManager extends ChangeNotifier {
       isIncognito: isIncognito,
     );
     
-    if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://') && !url.startsWith('novafs://')) {
+    if (_isWebUrl(url)) {
       tab.controller = _initController(tab, url);
     }
     
@@ -58,7 +59,7 @@ class TabManager extends ChangeNotifier {
     final tab = currentTab;
     tab.url = url;
     
-    if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://') && !url.startsWith('novafs://')) {
+    if (_isWebUrl(url)) {
       if (tab.controller == null) {
         tab.controller = _initController(tab, url);
       } else {
@@ -92,7 +93,6 @@ class TabManager extends ChangeNotifier {
     }
   }
 
-  // Toggle Desktop Mode by changing User Agent
   Future<void> toggleDesktopMode() async {
     final tab = currentTab;
     if (tab.controller == null) return;
@@ -103,13 +103,12 @@ class TabManager extends ChangeNotifier {
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
       );
     } else {
-      await tab.controller!.setUserAgent(''); // Reset to default mobile
+      await tab.controller!.setUserAgent('');
     }
     tab.controller!.reload();
     notifyListeners();
   }
 
-  // Toggle Reader Mode (Basic CSS injection for readability)
   Future<void> toggleReaderMode() async {
     final tab = currentTab;
     if (tab.controller == null) return;
@@ -127,12 +126,15 @@ class TabManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Find in Page using JS window.find()
   Future<void> findInPage(String query) async {
     final tab = currentTab;
     if (tab.controller == null || query.isEmpty) return;
-    
     await tab.controller!.runJavaScript('window.find("$query", false, false, true, false, true, false)');
+  }
+
+  // Helper to check if URL should render a WebView
+  bool _isWebUrl(String url) {
+    return url.startsWith('http') || url.startsWith('https');
   }
 
   WebViewController _initController(BrowserTab tab, String initialUrl) {
@@ -158,6 +160,27 @@ class TabManager extends ChangeNotifier {
               _historyService.addEntry(url, tab.title);
             }
             notifyListeners();
+          },
+          // Intercept navigation requests (PDFs & External Apps)
+          onNavigationRequest: (request) async {
+            final url = request.url;
+            
+            // 1. Open External Apps (mailto:, tel:, intent:, geo:)
+            if (url.startsWith('mailto:') || url.startsWith('tel:') || url.startsWith('intent:') || url.startsWith('geo:')) {
+              if (await canLaunchUrl(Uri.parse(url))) {
+                await launchUrl(Uri.parse(url));
+              }
+              return NavigationDecision.prevent;
+            }
+
+            // 2. Built-in PDF Viewer
+            if (url.endsWith('.pdf')) {
+              final pdfViewerUrl = 'https://docs.google.com/gview?embedded=true&url=$url';
+              tab.controller!.loadRequest(Uri.parse(pdfViewerUrl));
+              return NavigationDecision.prevent;
+            }
+
+            return NavigationDecision.navigate;
           },
         ),
       )

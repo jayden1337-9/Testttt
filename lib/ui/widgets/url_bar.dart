@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/tab_manager.dart';
 import '../services/bookmarks_service.dart';
 import 'package:provider/provider.dart';
@@ -77,27 +78,21 @@ class UrlBar extends StatelessWidget {
                 icon: Icon(currentTab.isDesktopMode ? Icons.desktop_windows : Icons.phone_android),
                 onPressed: () => tabManager.toggleDesktopMode(),
               ),
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  // Show Find Bar inside WebViewContainer
-                  // We use a simple notification or state for this. 
-                  // For now, it triggers the find directly on a preset query.
-                  tabManager.findInPage('Nova');
-                },
-              ),
             ],
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               onSelected: (value) {
                 if (value == 'new_tab') tabManager.addTab('about:newtab');
                 if (value == 'new_incognito') tabManager.addTab('about:newtab', isIncognito: true);
+                if (value == 'share') Share.share(currentTab.url, subject: currentTab.title);
                 if (value == 'history') tabManager.updateUrl('browser://history');
                 if (value == 'downloads') tabManager.updateUrl('about:downloads');
                 if (value == 'files') tabManager.updateUrl('novafs://');
                 if (value == 'settings') tabManager.updateUrl('nova://settings');
               },
               itemBuilder: (context) => [
+                const PopupMenuItem(value: 'share', child: Text('Share Link')),
+                const PopupMenuDivider(),
                 const PopupMenuItem(value: 'new_tab', child: Text('New Tab')),
                 const PopupMenuItem(value: 'new_incognito', child: Text('New Incognito Tab')),
                 const PopupMenuItem(value: 'history', child: Text('History')),
