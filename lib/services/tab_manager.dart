@@ -2,13 +2,14 @@ import 'package:flutter/foundation.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../models/browser_tab.dart';
 import 'history_service.dart';
+import 'bookmarks_service.dart';
 import 'download_manager.dart';
 
-/// Manages the state of all open browser tabs.
 class TabManager extends ChangeNotifier {
   final List<BrowserTab> _tabs = [];
   int _currentIndex = 0;
   final HistoryService _historyService = HistoryService();
+  final BookmarksService _bookmarksService = BookmarksService();
   final DownloadManager _downloadManager = DownloadManager();
 
   List<BrowserTab> get tabs => List.unmodifiable(_tabs);
@@ -25,7 +26,7 @@ class TabManager extends ChangeNotifier {
       url: url,
     );
     
-    if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://')) {
+    if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://') && !url.startsWith('novafs://')) {
       tab.controller = _initController(tab, url);
     }
     
@@ -40,7 +41,6 @@ class TabManager extends ChangeNotifier {
       addTab('about:newtab');
       return;
     }
-    
     _tabs.removeAt(index);
     if (_currentIndex >= _tabs.length) {
       _currentIndex = _tabs.length - 1;
@@ -57,7 +57,7 @@ class TabManager extends ChangeNotifier {
     final tab = currentTab;
     tab.url = url;
     
-    if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://')) {
+    if (!url.startsWith('about:') && !url.startsWith('nova://') && !url.startsWith('browser://') && !url.startsWith('novafs://')) {
       if (tab.controller == null) {
         tab.controller = _initController(tab, url);
       } else {
@@ -66,7 +66,6 @@ class TabManager extends ChangeNotifier {
     } else {
       tab.controller = null; 
     }
-    
     notifyListeners();
   }
 
@@ -77,6 +76,19 @@ class TabManager extends ChangeNotifier {
       return true;
     }
     return false;
+  }
+
+  Future<void> toggleBookmark() async {
+    final tab = currentTab;
+    if (tab.url.startsWith('http')) {
+      final isBookmarked = await _bookmarksService.isBookmarked(tab.url);
+      if (isBookmarked) {
+        await _bookmarksService.removeBookmark(tab.url);
+      } else {
+        await _bookmarksService.addBookmark(tab.url, tab.title);
+      }
+      notifyListeners();
+    }
   }
 
   WebViewController _initController(BrowserTab tab, String initialUrl) {
@@ -98,17 +110,14 @@ class TabManager extends ChangeNotifier {
             tab.isLoading = false;
             final title = await tab.controller!.getTitle();
             tab.title = title ?? 'Untitled';
-            
             _historyService.addEntry(url, tab.title);
             notifyListeners();
           },
         ),
       )
-      // Intercept Download Requests
       ..setOnDownloadPermissionRequest((request) async {
         final url = request.url.toString();
         final filename = url.split('/').last.split('?').first;
-        
         await _downloadManager.startDownload(url, filename);
         return DownloadPermissionResponse.allow;
       })

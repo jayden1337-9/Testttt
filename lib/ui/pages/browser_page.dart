@@ -4,7 +4,9 @@ import '../services/tab_manager.dart';
 import 'new_tab_page.dart';
 import 'settings_page.dart';
 import 'history_page.dart';
+import 'bookmarks_page.dart';
 import 'downloads_page.dart';
+import 'file_manager_page.dart';
 import '../widgets/url_bar.dart';
 import '../widgets/web_view_container.dart';
 
@@ -51,18 +53,12 @@ class _BrowserPageState extends State<BrowserPage> {
   }
 
   Widget _renderContent(BrowserTab tab) {
-    if (tab.url == 'about:newtab') {
-      return const NewTabPage();
-    }
-    if (tab.url == 'nova://settings') {
-      return const SettingsPage();
-    }
-    if (tab.url == 'browser://history') {
-      return const HistoryPage();
-    }
-    if (tab.url == 'about:downloads') {
-      return const DownloadsPage();
-    }
+    if (tab.url == 'about:newtab') return const NewTabPage();
+    if (tab.url == 'nova://settings') return const SettingsPage();
+    if (tab.url == 'browser://history') return const HistoryPage();
+    if (tab.url == 'browser://bookmarks') return const BookmarksPage();
+    if (tab.url == 'about:downloads') return const DownloadsPage();
+    if (tab.url.startsWith('novafs://')) return FileManagerPage(initialPath: tab.url);
     
     if (tab.controller != null) {
       return WebViewContainer(controller: tab.controller!);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/tab_manager.dart';
+import '../services/bookmarks_service.dart';
 import 'package:provider/provider.dart';
 
 class UrlBar extends StatelessWidget {
@@ -28,7 +29,8 @@ class UrlBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tabManager = context.watch<TabManager>();
-    _controller.text = tabManager.currentTab.url == 'about:newtab' ? '' : tabManager.currentTab.url;
+    final currentUrl = tabManager.currentTab.url;
+    _controller.text = currentUrl == 'about:newtab' ? '' : currentUrl;
 
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -51,9 +53,7 @@ class UrlBar extends StatelessWidget {
                 prefixIcon: const Icon(Icons.lock_outline, size: 20),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.refresh),
-                  onPressed: () {
-                    tabManager.updateUrl(tabManager.currentTab.url);
-                  },
+                  onPressed: () => tabManager.updateUrl(currentUrl),
                 ),
               ),
               onSubmitted: (value) {
@@ -63,9 +63,25 @@ class UrlBar extends StatelessWidget {
               },
             ),
           ),
+          // Bookmark Button (Dynamic Icon)
+          if (currentUrl.startsWith('http'))
+            FutureBuilder<bool>(
+              future: BookmarksService().isBookmarked(currentUrl),
+              builder: (context, snapshot) {
+                final isBookmarked = snapshot.data ?? false;
+                return IconButton(
+                  icon: Icon(isBookmarked ? Icons.star : Icons.star_border),
+                  onPressed: () => tabManager.toggleBookmark(),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.download),
             onPressed: () => tabManager.updateUrl('about:downloads'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.folder_open),
+            onPressed: () => tabManager.updateUrl('novafs://'),
           ),
           IconButton(
             icon: const Icon(Icons.settings),
